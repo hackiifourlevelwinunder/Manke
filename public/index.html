@@ -1,0 +1,33 @@
+
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TRON Top-TRX RNG</title>
+<style>
+body{font-family:system-ui,Arial;background:#051126;color:#e8f4ff;padding:16px}
+.container{max-width:900px;margin:0 auto}
+.header{padding:12px;border-radius:8px}
+h1{color:#7ad4ff;margin:0}
+.clock{color:#bfe1ff;margin-top:6px}
+.card{background:#07203a;padding:12px;border-radius:8px;margin-top:12px}
+.big{font-size:56px;font-weight:700;text-align:center;margin:10px 0;color:#fff}
+.small{color:#9fb4d9}
+.list{margin-top:10px}
+.item{display:flex;justify-content:space-between;padding:8px;border-radius:8px;background:#0b2340;margin-bottom:8px}
+</style></head><body>
+<div class="container">
+  <div class="header"><h1>TRON Top-TRX RNG (0–9)</h1><div class="clock" id="clock">--:--:--</div></div>
+  <div class="card"><div class="small">Preview (shown 40s before minute start)</div><div class="big" id="preview">—</div><div class="small" id="preview-meta"></div></div>
+  <div class="card"><div class="small">Final (revealed at minute start)</div><div class="big" id="final">—</div><div class="small" id="final-meta"></div></div>
+  <div class="card"><div class="small">Top TRX transaction this minute</div><div id="toptx" class="small">—</div></div>
+  <div class="card"><div class="small">History (latest)</div><div id="history"></div></div>
+</div>
+<script>
+function updateClock(){ document.getElementById('clock').textContent = new Date().toLocaleString('en-IN',{hour12:false}); requestAnimationFrame(updateClock); }
+updateClock();
+const es = new EventSource('/events');
+es.addEventListener('init', e=>{ const d=JSON.parse(e.data); document.getElementById('preview-meta').textContent='Server time: '+new Date(d.serverTime).toLocaleString(); (d.history||[]).slice().reverse().forEach(renderHistory); });
+es.addEventListener('preview', e=>{ const d=JSON.parse(e.data); document.getElementById('preview').textContent = d.number; document.getElementById('preview-meta').textContent = 'Block: '+(d.blockNumber||'')+' TxCount:'+ (d.txCount||0); if (d.topTx) document.getElementById('toptx').textContent = 'Top TX: '+(d.topTx.txID||'')+' — '+(d.topTx.amountTRX||0)+' TRX'; });
+es.addEventListener('reveal', e=>{ const d=JSON.parse(e.data); document.getElementById('final').textContent = d.number; document.getElementById('final-meta').textContent = 'Block: '+(d.blockNumber||''); if (d.topTx) document.getElementById('toptx').textContent = 'Top TX: '+(d.topTx.txID||'')+' — '+(d.topTx.amountTRX||0)+' TRX'; renderHistory(d); });
+function renderHistory(item){ const h = document.getElementById('history'); const div = document.createElement('div'); div.className='item'; const left = document.createElement('div'); left.innerHTML = '<div style="font-weight:700">'+item.number+'</div><div class="small">block:'+ (item.blockNumber||'') +'</div>'; const right = document.createElement('div'); right.innerHTML = '<div class="small">'+ (item.topTx? (item.topTx.amountTRX+' TRX') : '') +'</div><div class="small">'+ (item.minuteStartIso? new Date(item.minuteStartIso).toLocaleString() : '') +'</div>'; div.appendChild(left); div.appendChild(right); h.insertBefore(div, h.firstChild); while(h.childNodes.length>20) h.removeChild(h.lastChild); }
+</script>
+</body></html>
